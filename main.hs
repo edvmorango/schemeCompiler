@@ -30,7 +30,19 @@ readExpr input = case parse parseExpr "lisp" input of
         Right val -> show val
 
 parseExpr :: Parser LispVal
-parseExpr = parseBool
+parseExpr = parseAtom
+        <|> parseNumber
+        <|> parseBool
+        
+parseAtom :: Parser LispVal
+parseAtom = do
+        first <- letter <|> symbol
+        rest <- many (letter <|> digit <|> symbol)
+        let atom = first:rest
+        return $ Atom atom
+
+parseNumber :: Parser LispVal
+parseNumber = (many1 digit) >>= (\n -> return ((Number . read) n))
 
 parseBool :: Parser LispVal
 parseBool = do
