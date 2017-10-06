@@ -46,7 +46,7 @@ parseAtom = do
 parseString :: Parser LispVal
 parseString = do
         char '"'
-        string <- many (noneOf ['\\', '"'])
+        string <- many (escapedChars  <|> noneOf ['\\', '"'])
         char '"'
         return $ String string
 
