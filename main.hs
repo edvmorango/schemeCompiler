@@ -2,7 +2,9 @@ module Main where
 import System.Environment
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Data.Char
-
+import Data.Ratio
+import Data.Complex
+import Numeric
 
 data LispVal = Atom String
              | List [LispVal]
@@ -71,7 +73,31 @@ parseChar = do
                 [x] -> Char x
 
 parseNumber :: Parser LispVal
-parseNumber = (many1 digit) >>= (\n -> return ((Number . read) n))
+parseNumber =  readNumber <|> parseBaseNumber
+
+parseBaseNumber :: Parser LispVal
+parseBaseNumber =  char '#' >>
+        ((char 'd' >> parseNumber )
+        <|> (char 'o' >> readOctalNumber)
+        <|> (char 'x' >> readHexNumber))
+
+
+readNumber :: Parser LispVal
+readNumber = (many1 digit) >>= (\n -> return ((Number . read) n))
+
+
+readOctalNumber = readNumberInBase "01" 2
+readHexNumber = readNumberInBase "0123456789abcdefABCDEF" 16
+
+readNumberInBase :: String -> Integer -> Parser LispVal
+readNumberInBase digits base = do
+                    d <- many $ oneOf digits
+                    return $ Number $ toDecimal base d
+
+toDecimal :: Integer -> String -> Integer
+toDecimal base s = foldl1 ((+) . (* base)) $ map toNumber s
+                        where toNumber = (toInteger . digitToInt)
+
 
 parseBool :: Parser LispVal
 parseBool = do
