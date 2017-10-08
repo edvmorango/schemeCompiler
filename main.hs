@@ -14,6 +14,7 @@ data LispVal = Atom String
              | Bool Bool
              | Float Float
              | Rational Rational
+             | Complex (Complex Float)
              deriving (Eq, Show)
 
 
@@ -73,13 +74,26 @@ parseChar = do
                 [x] -> Char x
 
 parseNumber :: Parser LispVal
-parseNumber =  readRational <|> readFloat <|> readNumber <|> parseBaseNumber
+parseNumber =    try parseComplex <|> try readFloat <|> try readRational <|> try readNumber <|> try parseBaseNumber 
 
 parseBaseNumber :: Parser LispVal
 parseBaseNumber =  char '#' >>
         ((char 'd' >> parseNumber )
         <|> (char 'o' >> readOctalNumber)
         <|> (char 'x' >> readHexNumber))
+
+parseComplex :: Parser LispVal
+parseComplex =  do
+          real <- fmap toDouble $  (try readFloat) <|> readNumber
+          sign <- char '+' <|> char '-'
+          imaginary <- fmap toDouble $  (try readFloat) <|> readNumber
+          char 'i'
+          let sImaginary = case sign of
+                                  '+' -> imaginary
+                                  '-' -> negate imaginary
+          return $ Complex (real :+ sImaginary )
+          where toDouble (Float x) = x
+                toDouble (Number x) = fromInteger x :: Float
 
 readFloat :: Parser LispVal
 readFloat =  do
