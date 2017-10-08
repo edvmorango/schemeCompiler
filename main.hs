@@ -4,8 +4,7 @@ import Text.ParserCombinators.Parsec hiding (spaces)
 import Data.Char
 import Data.Ratio
 import Data.Complex
-import Numeric
-
+-
 data LispVal = Atom String
              | List [LispVal]
              | DottedList [LispVal] LispVal
@@ -14,11 +13,11 @@ data LispVal = Atom String
              | Char Char
              | Bool Bool
              | Float Float
-             deriving (Eq, Show)  
+             deriving (Eq, Show)
 
 
 main :: IO ()
-main = do 
+main = do
        args <- getArgs
        putStrLn (readExpr (args !! 0))
 
@@ -27,7 +26,7 @@ symbol :: Parser Char
 symbol = oneOf "!$%&|*+-/:<=>?@^_~"
 
 readExpr :: String -> String
-readExpr input = case parse parseExpr "lisp" input of 
+readExpr input = case parse parseExpr "lisp" input of
         Left err -> "No match" ++ show err
         Right val -> show val
 
@@ -37,7 +36,7 @@ parseExpr = parseAtom
         <|> try parseBool
         <|> try parseString
         <|> try parseChar
-        
+
 parseAtom :: Parser LispVal
 parseAtom = do
         first <- letter <|> symbol
@@ -73,7 +72,7 @@ parseChar = do
                 [x] -> Char x
 
 parseNumber :: Parser LispVal
-parseNumber =  readNumber <|> parseBaseNumber
+parseNumber =  readFloat <|> try readNumber <|> parseBaseNumber
 
 parseBaseNumber :: Parser LispVal
 parseBaseNumber =  char '#' >>
@@ -81,10 +80,16 @@ parseBaseNumber =  char '#' >>
         <|> (char 'o' >> readOctalNumber)
         <|> (char 'x' >> readHexNumber))
 
+readFloat :: Parser LispVal
+readFloat =  do
+        whole <- many digit
+        char '.'
+        decimal <- many digit
+        return $ Float (read (whole ++ "." ++ decimal) :: Float )
+
 
 readNumber :: Parser LispVal
 readNumber = (many1 digit) >>= (\n -> return ((Number . read) n))
-
 
 readOctalNumber = readNumberInBase "01" 2
 readHexNumber = readNumberInBase "0123456789abcdefABCDEF" 16
@@ -102,7 +107,7 @@ toDecimal base s = foldl1 ((+) . (* base)) $ map toNumber s
 parseBool :: Parser LispVal
 parseBool = do
         char '#'
-        s <- oneOf['t','f'] 
+        s <- oneOf['t','f']
         return $ case s of
                 't' -> Bool True
                 'f' -> Bool False
