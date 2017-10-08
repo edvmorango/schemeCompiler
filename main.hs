@@ -35,13 +35,20 @@ readExpr input = case parse parseExpr "lisp" input of
 
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
-        <|> parseNumber
-        <|> try parseBool
-        <|> try parseString
+        <|> parseString
         <|> try parseChar
+        <|> parseNumber
+        <|> parseBool
+        <|> parseQuoted
+        <|> do
+            char  '('
+            e <- (try parseList) <|> parseDottedList
+            char ')'
+            return e
+
 
 parseNumber :: Parser LispVal
-parseNumber =    try parseComplex <|> try readFloat <|> try readRational <|> try readNumber <|> try parseBaseNumber
+parseNumber =  try parseComplex <|> try readFloat <|> try readRational <|> try (readNumber <|> parseBaseNumber)
 
 parseAtom :: Parser LispVal
 parseAtom = do
@@ -69,7 +76,7 @@ parseChar = do
 
 parseBaseNumber :: Parser LispVal
 parseBaseNumber =  char '#' >>
-        ((char 'd' >> parseNumber )
+        ((char 'd' >> readNumber )
         <|> (char 'o' >> readOctalNumber)
         <|> (char 'x' >> readHexNumber))
 
@@ -88,9 +95,9 @@ parseComplex =  do
 
 readFloat :: Parser LispVal
 readFloat =  do
-        whole <- many digit
+        whole <- many1 digit
         char '.'
-        decimal <- many digit
+        decimal <- many1 digit
         return $ Float (read (whole ++ "." ++ decimal) :: Float )
 
 readRational :: Parser LispVal
@@ -132,4 +139,21 @@ escapedChars = do
                 'n' -> '\n'
                 'r' -> '\r'
                 't' -> '\t'
-                
+
+parseList :: Parser LispVal
+parseList = liftM List $ sepBy parseExpr spaces
+
+parseDottedList :: Parser LispVal
+parseDottedList = do
+              head <- endBy parseExpr spaces
+              tail <- char '.' >> spaces >> parseExpr
+              return $ DottedList head tail
+
+parseQuoted :: Parser LispVal
+parseQuoted = do
+          char '\''
+          e <- parseExpr
+          return $ List [Atom "quote", e]
+
+spaces :: Parser ()
+spaces = skipMany1 space
