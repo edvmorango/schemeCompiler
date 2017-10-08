@@ -4,6 +4,7 @@ import Text.ParserCombinators.Parsec hiding (spaces)
 import Data.Char
 import Data.Ratio
 import Data.Complex
+import Control.Monad(liftM)
 
 data LispVal = Atom String
              | List [LispVal]
@@ -39,6 +40,9 @@ parseExpr = parseAtom
         <|> try parseString
         <|> try parseChar
 
+parseNumber :: Parser LispVal
+parseNumber =    try parseComplex <|> try readFloat <|> try readRational <|> try readNumber <|> try parseBaseNumber
+
 parseAtom :: Parser LispVal
 parseAtom = do
         first <- letter <|> symbol
@@ -46,23 +50,13 @@ parseAtom = do
         let atom = first:rest
         return $ Atom atom
 
-parseString :: Parser LispVal
-parseString = do
-        char '"'
-        string <- many (escapedChars  <|> noneOf ['\\', '"'])
-        char '"'
-        return $ String string
-
-escapedChars :: Parser Char
-escapedChars = do
-        char '\\'
-        c <- oneOf['\\', 'n', 'r', 't']
-        return $ case c of
-                '\\' -> c
-                '"' -> c
-                'n' -> '\n'
-                'r' -> '\r'
-                't' -> '\t'
+parseBool :: Parser LispVal
+parseBool = do
+        char '#'
+        s <- oneOf['t','f']
+        return $ case s of
+                't' -> Bool True
+                'f' -> Bool False
 
 parseChar :: Parser LispVal
 parseChar = do
@@ -72,9 +66,6 @@ parseChar = do
                 "space" -> Char ' '
                 "newline" -> Char '\n'
                 [x] -> Char x
-
-parseNumber :: Parser LispVal
-parseNumber =    try parseComplex <|> try readFloat <|> try readRational <|> try readNumber <|> try parseBaseNumber 
 
 parseBaseNumber :: Parser LispVal
 parseBaseNumber =  char '#' >>
@@ -124,11 +115,21 @@ toDecimal :: Integer -> String -> Integer
 toDecimal base s = foldl1 ((+) . (* base)) $ map toNumber s
                         where toNumber = (toInteger . digitToInt)
 
+parseString :: Parser LispVal
+parseString = do
+        char '"'
+        string <- many (escapedChars  <|> noneOf ['\\', '"'])
+        char '"'
+        return $ String string
 
-parseBool :: Parser LispVal
-parseBool = do
-        char '#'
-        s <- oneOf['t','f']
-        return $ case s of
-                't' -> Bool True
-                'f' -> Bool False
+escapedChars :: Parser Char
+escapedChars = do
+        char '\\'
+        c <- oneOf['\\', 'n', 'r', 't']
+        return $ case c of
+                '\\' -> c
+                '"' -> c
+                'n' -> '\n'
+                'r' -> '\r'
+                't' -> '\t'
+                
