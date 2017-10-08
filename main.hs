@@ -4,7 +4,7 @@ import Text.ParserCombinators.Parsec hiding (spaces)
 import Data.Char
 import Data.Ratio
 import Data.Complex
--
+
 data LispVal = Atom String
              | List [LispVal]
              | DottedList [LispVal] LispVal
@@ -13,6 +13,7 @@ data LispVal = Atom String
              | Char Char
              | Bool Bool
              | Float Float
+             | Rational Rational
              deriving (Eq, Show)
 
 
@@ -72,7 +73,7 @@ parseChar = do
                 [x] -> Char x
 
 parseNumber :: Parser LispVal
-parseNumber =  readFloat <|> try readNumber <|> parseBaseNumber
+parseNumber =  readRational <|> readFloat <|> readNumber <|> parseBaseNumber
 
 parseBaseNumber :: Parser LispVal
 parseBaseNumber =  char '#' >>
@@ -87,6 +88,12 @@ readFloat =  do
         decimal <- many digit
         return $ Float (read (whole ++ "." ++ decimal) :: Float )
 
+readRational :: Parser LispVal
+readRational = do
+        num <- many digit
+        char '/'
+        den <- many digit
+        return $ Rational (read (num ++ "%" ++ den) :: Rational )
 
 readNumber :: Parser LispVal
 readNumber = (many1 digit) >>= (\n -> return ((Number . read) n))
