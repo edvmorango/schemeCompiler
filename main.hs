@@ -4,11 +4,13 @@ import Text.ParserCombinators.Parsec hiding (spaces)
 import Data.Char
 import Data.Ratio
 import Data.Complex
+import Data.Array
 import Control.Monad(liftM)
 
 data LispVal = Atom String
              | List [LispVal]
              | DottedList [LispVal] LispVal
+             | Vector (Array Int LispVal)
              | Number Integer
              | String String
              | Char Char
@@ -38,7 +40,8 @@ parseExpr = parseAtom
         <|> parseString
         <|> try parseChar
         <|> parseNumber
-        <|> parseBool
+        <|> try parseBool
+        <|> try parseVector
         <|> parseQuoted
         <|> parseQuasiquoted
         <|> parseUnquoted
@@ -170,6 +173,12 @@ parseUnquoted = do
           e <- parseExpr
           return $ List [Atom "unquote", e]
 
+parseVector :: Parser LispVal
+parseVector = do
+          string "#("
+          es <- sepBy parseExpr spaces
+          char ')'
+          return $ Vector (listArray (0, (length es) - 1) es)
 
 spaces :: Parser ()
 spaces = skipMany1 space
