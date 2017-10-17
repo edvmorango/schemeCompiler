@@ -40,6 +40,8 @@ parseExpr = parseAtom
         <|> parseNumber
         <|> parseBool
         <|> parseQuoted
+        <|> parseQuasiquoted
+        <|> parseUnquoted
         <|> do
             char  '('
             e <- (try parseList) <|> parseDottedList
@@ -167,6 +169,7 @@ parseUnquoted = do
           char ','
           e <- parseExpr
           return $ List [Atom "unquote", e]
+
 
 spaces :: Parser ()
 spaces = skipMany1 space
