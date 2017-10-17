@@ -110,7 +110,7 @@ readRational = do
 readNumber :: Parser LispVal
 readNumber = (many1 digit) >>= (\n -> return ((Number . read) n))
 
-readOctalNumber = readNumberInBase "01" 2
+readOctalNumber = readNumberInBase "012345678" 8
 readHexNumber = readNumberInBase "0123456789abcdefABCDEF" 16
 
 readNumberInBase :: String -> Integer -> Parser LispVal
@@ -154,6 +154,19 @@ parseQuoted = do
           char '\''
           e <- parseExpr
           return $ List [Atom "quote", e]
+
+parseQuasiquoted :: Parser LispVal
+parseQuasiquoted = do
+          char '`'
+          e <- parseExpr
+          return $ List [Atom "quasiquote", e]
+
+
+parseUnquoted :: Parser LispVal
+parseUnquoted = do
+          char ','
+          e <- parseExpr
+          return $ List [Atom "unquote", e]
 
 spaces :: Parser ()
 spaces = skipMany1 space
